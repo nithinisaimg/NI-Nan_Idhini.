@@ -48,7 +48,7 @@ export const analyzeEmotion = createServerFn({ method: "POST" })
       return {
         detected_emotion: ai.detected_emotion,
         stress_level: "high",
-        confidence_score: Math.max(ai.confidence, 0.9),
+        confidence_score: computeConfidence("high", crisis.matched.length + ai.detected_keywords.length, data.text.length),
         detected_keywords: Array.from(new Set([...crisis.matched, ...ai.detected_keywords])),
         risk_flag: true,
         chatbot_reply:
@@ -61,10 +61,28 @@ export const analyzeEmotion = createServerFn({ method: "POST" })
     return {
       detected_emotion: ai.detected_emotion,
       stress_level: ai.stress_level,
-      confidence_score: ai.confidence,
+      confidence_score: computeConfidence(ai.stress_level, ai.detected_keywords.length, data.text.length),
       detected_keywords: ai.detected_keywords,
       risk_flag: false,
       chatbot_reply: ai.chatbot_reply,
       solo_recommendations: recommendationsFor(ai.detected_emotion),
     };
   });
+
+// Confidence is derived from stress_level (primary signal) and adjusted by
+// the number of detected keywords and the input length. Same input -> same
+// score, but it varies meaningfully across emotions / inputs.
+function computeConfidence(
+  stress: "low" | "medium" | "high",
+  keywordCount: number,
+  textLength: number,
+): number {
+  const base = stress === "high" ? 0.82 : stress === "medium" ? 0.68 : 0.55;
+  // More matched keywords -> more grounded prediction (cap at +0.12).
+  const keywordBoost = Math.min(keywordCount, 6) * 0.02;
+  // Very short inputs are inherently less reliable.
+  const lengthFactor =
+    textLength < 15 ? -0.15 : textLength < 40 ? -0.05 : textLength > 180 ? 0.04 : 0;
+  const score = base + keywordBoost + lengthFactor;
+  return Math.max(0.3, Math.min(0.97, Number(score.toFixed(2))));
+}
