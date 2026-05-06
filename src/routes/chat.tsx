@@ -72,7 +72,7 @@ function ChatPage() {
       </div>
 
       {/* Composer */}
-      <div className="sticky bottom-4 mt-10">
+      <div className="mt-10">
         <div className="border border-border bg-surface">
           <div className="flex items-center justify-between px-4 py-2 border-b border-border text-[10px] tracking-widest uppercase text-muted-foreground">
             <span>Input</span>
