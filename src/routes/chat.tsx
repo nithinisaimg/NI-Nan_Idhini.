@@ -82,14 +82,19 @@ function ChatPage() {
             value={text}
             onChange={(e) => setText(e.target.value.slice(0, 2000))}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit();
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                submit();
+              }
             }}
             placeholder="Describe how you feel right now…"
             rows={3}
             className="w-full bg-transparent px-4 py-3 text-sm leading-relaxed outline-none resize-none placeholder:text-muted-foreground/60"
           />
           <div className="flex items-center justify-between px-4 py-2 border-t border-border">
-            <div className="text-[10px] tracking-widest uppercase text-muted-foreground">⌘/Ctrl + Enter to send</div>
+            <div className="text-[10px] tracking-widest uppercase text-muted-foreground">
+              {text.trim().length < 2 ? "Type at least 2 characters" : "Enter to send · Shift+Enter for newline"}
+            </div>
             <button
               onClick={submit}
               disabled={busy || text.trim().length < 2}
