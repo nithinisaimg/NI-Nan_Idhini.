@@ -155,7 +155,7 @@ function ResultView({ r }: { r: AnalyzeResponse }) {
       <div className="grid grid-cols-3 gap-px bg-border border border-border">
         <Stat k="Emotion" v={cap(r.detected_emotion)} />
         <Stat k="Stress" v={cap(r.stress_level)} accent={r.stress_level} />
-        <Stat k="Confidence" v={`${Math.round(r.confidence_score * 100)}%`} />
+        <Stat k="Cues" v={String(r.detected_keywords.length)} />
       </div>
 
       {/* Reply */}
