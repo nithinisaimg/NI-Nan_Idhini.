@@ -116,13 +116,13 @@ export async function analyzeText(text: string): Promise<AIAnalysis> {
       const responseText = String(json?.candidates?.[0]?.content?.parts?.[0]?.text ?? "");
       if (!responseText) continue;
 
-      const parsed = parseFirstJson(responseText);
+      const parsed = parseFirstJson(responseText) as Record<string, unknown>;
       return {
         detected_emotion: normalizeEmotion(parsed.detected_emotion),
         stress_level: normalizeStress(parsed.stress_level),
         confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0.5)),
         detected_keywords: Array.isArray(parsed.detected_keywords)
-          ? parsed.detected_keywords.map((k) => String(k)).slice(0, 5)
+          ? (parsed.detected_keywords as unknown[]).map((k) => String(k)).slice(0, 5)
           : [],
         chatbot_reply: String(parsed.chatbot_reply || ""),
       };
@@ -159,7 +159,7 @@ function analyzeLocally(text: string): AIAnalysis {
     detected_emotion: best,
     stress_level,
     confidence: Math.max(0.35, Math.min(0.78, 0.42 + score * 0.08)),
-    detected_keywords: extractKeywords(text).slice(0, 5),
+    detected_keywords: extractEmotionKeywords(text).slice(0, 5),
     chatbot_reply:
       best === "calm"
         ? "I'm glad you're noticing a calmer moment. Try to protect this state for a few minutes with one gentle solo action and a slow breath."
@@ -167,13 +167,28 @@ function analyzeLocally(text: string): AIAnalysis {
   };
 }
 
-function extractKeywords(text: string): string[] {
-  const words = text
-    .toLowerCase()
-    .replace(/[^a-z\s]/g, " ")
-    .split(/\s+/)
-    .filter((w) => w.length > 3);
-  return Array.from(new Set(words));
+function extractEmotionKeywords(text: string): string[] {
+  const normalized = text.toLowerCase();
+  const candidates = new Set<string>();
+
+  for (const hints of Object.values(EMOTION_HINTS)) {
+    for (const hint of hints) {
+      if (hint.length === 0) continue;
+      const pattern = new RegExp(`\\b${hint.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}\\b`, "i");
+      if (pattern.test(normalized)) {
+        candidates.add(hint);
+      }
+    }
+  }
+
+  for (const [alias, emotion] of Object.entries(EMOTION_ALIASES)) {
+    const pattern = new RegExp(`\\b${alias.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}\\b`, "i");
+    if (pattern.test(normalized)) {
+      candidates.add(alias);
+    }
+  }
+
+  return Array.from(candidates);
 }
 
 function normalizeEmotion(value: unknown): Emotion {
